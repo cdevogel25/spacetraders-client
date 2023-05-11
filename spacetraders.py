@@ -13,7 +13,7 @@ class Agent:
         return data['token']
     
     def getAgent(self, authHeaders):
-        agentURL = f'{self.URL}/v2/my/agent'
+        agentURL = f"{self.URL}/v2/my/agent"
         print(agentURL)
         r = requests.get(url=agentURL, headers=authHeaders)
         agentData = r.json()
@@ -31,12 +31,11 @@ class Navigation(Agent):
             'waypoint': '-'.join(headquarters[0:3])
         }
 
-        locationURL = 'v2/systems/{system}/waypoints/{waypoint}'.format(
-            system=location['system'],
-            waypoint=location['waypoint']
-        )
+        locationURL = f"{self.URL}/v2/systems/{location['system']}/waypoints/{location['waypoint']}"
+        print(locationURL)
 
-        r = requests.get(url = self.URL.format(locationURL), headers = self.authHeaders)
+        r = requests.get(url = locationURL, headers = self.authHeaders)
+        # print(r)
         locationData = r.json()
         if data:
             return (location, locationData)
@@ -44,7 +43,7 @@ class Navigation(Agent):
             return location
 
     def getWaypoints(self, waypointType=None):
-        waypointURL = self.URL.format('v2/systems/{system}/waypoints'.format(system = self.location['system']))
+        waypointURL = f"{self.URL}/v2/systems/{self.location['system']}/waypoints"
         r = requests.get(url = waypointURL, headers = self.authHeaders)
         waypointData = r.json()
 
@@ -66,7 +65,7 @@ class Navigation(Agent):
 class Contract(Agent):
 
     def getContracts(self):
-        contractsURL = self.URL.format('v2/my/contracts')
+        contractsURL = f"{self.URL}/v2/my/contracts"
         r = requests.get(url = contractsURL, headers = self.authHeaders)
         contractsData = r.json()
         accepted = contractsData['data'][0]['accepted']
@@ -112,5 +111,5 @@ class Trader(Navigation, Contract):
 
 
 trader = Trader('./token/token.json')
-# print(trader.getShipyardInventory(trader.location['system']))
+print(trader.getShipyardInventory(trader.location['system']))
 # print(trader.getContracts())
