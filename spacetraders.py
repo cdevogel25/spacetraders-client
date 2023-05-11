@@ -1,28 +1,28 @@
 import requests
 import json
 
-class sTrader:
-
-    URL = 'https://api.spacetraders.io/{}'
-
-    def __init__(self, token):
-        self.token = self.getToken(token)
-        self.authHeaders = {"Authorization": "Bearer {}".format(self.token)}
-        self.agent = self.getAgent()
+# divide classes into systems
+# agent, nav, ship, contracts, etc.
+# trader inherits systems
+class Agent:
+    URL = 'https://api.spacetraders.io'
 
     def getToken(self, token):
         with open(token) as f:
             data = json.loads(f.read())
         return data['token']
     
-    def getAgent(self):
-        agentURL = self.URL.format('v2/my/agent')
-        r = requests.get(url=agentURL, headers=self.authHeaders)
+    def getAgent(self, authHeaders):
+        agentURL = f'{self.URL}/v2/my/agent'
+        print(agentURL)
+        r = requests.get(url=agentURL, headers=authHeaders)
         agentData = r.json()
 
         return agentData
 
-    def getLocation(self):
+class Navigation(Agent):
+
+    def getLocation(self, data=False):
         headquarters = self.agent['data']['headquarters'].split('-')
 
         location = {
@@ -31,15 +31,86 @@ class sTrader:
             'waypoint': '-'.join(headquarters[0:3])
         }
 
-        locationURL = 'v2/systems/{systemSymbol}/waypoints/{waypointSymbol}'.format(
-            systemSymbol=location['system'],
-            waypointSymbol=location['waypoint']
+        locationURL = 'v2/systems/{system}/waypoints/{waypoint}'.format(
+            system=location['system'],
+            waypoint=location['waypoint']
         )
 
-        r = requests.get(url=self.URL.format(locationURL), headers=self.authHeaders)
+        r = requests.get(url = self.URL.format(locationURL), headers = self.authHeaders)
         locationData = r.json()
-        return locationData
+        if data:
+            return (location, locationData)
+        else:
+            return location
 
-trader = sTrader('./token/token.json')
+    def getWaypoints(self, waypointType=None):
+        waypointURL = self.URL.format('v2/systems/{system}/waypoints'.format(system = self.location['system']))
+        r = requests.get(url = waypointURL, headers = self.authHeaders)
+        waypointData = r.json()
 
-print(trader.getLocation())
+        if waypointType:
+            for waypoint in waypointData['data']:
+                print(waypoint['type'])
+                if waypoint['type'] == waypointType:
+                    return waypoint
+        
+        return waypointData
+
+    def getShipyardInventory(self, location):
+        shipyardWaypoint = self.getWaypoints(waypointType='ORBITAL_STATION')
+        shipyardURL = f'{self.URL}/v2/systems/{location}/waypoints/{shipyardWaypoint}'
+
+        r = requests.get(url = shipyardURL, headers = self.authHeaders)
+        return r.json()
+
+class Contract(Agent):
+
+    def getContracts(self):
+        contractsURL = self.URL.format('v2/my/contracts')
+        r = requests.get(url = contractsURL, headers = self.authHeaders)
+        contractsData = r.json()
+        accepted = contractsData['data'][0]['accepted']
+
+        for contract in contractsData['data']:
+            self.printContract(contract)
+
+        if not accepted:
+            accept = input('Accept contract {id}? (y/n): '.format(id=contractsData['data'][0]['id'].upper()))
+            if accept == 'y':
+                r = requests.post(url = contractsURL + '/{id}/accept'.format(id = contractsData['data'][0]['id']), headers=self.authHeaders)
+                print(r.json())
+    
+    def printContract(self, contract):
+        contractString = 'Contract ID: {id}\nOffered By: {faction}\nContract Type: {type}\n' \
+                        'Deliver {unitsRequired} units of {commodity} to {destination} by {deadline}\n'\
+                        'Payment:\n\tAdvance:\t{onAccepted}c\n\tOn Completion:\t{onFulfilled}c\nExpiration: {expiration}'
+        terms = contract['terms']
+        deliver = terms['deliver']
+        
+        print(contractString.format(
+                id = contract['id'].upper(),
+                faction = contract['factionSymbol'],
+                type = contract['type'],
+                unitsRequired = deliver[0]['unitsRequired'],
+                commodity = deliver[0]['tradeSymbol'],
+                destination = deliver[0]['destinationSymbol'],
+                deadline = terms['deadline'],
+                onAccepted = terms['payment']['onAccepted'],
+                onFulfilled = terms['payment']['onFulfilled'],
+                expiration = contract['expiration']
+            )
+        )
+
+class Trader(Navigation, Contract):
+
+    def __init__(self, token):
+        self.token = self.getToken(token)
+        self.authHeaders = {"Authorization": f"Bearer {self.token}"}
+        self.agent = self.getAgent(self.authHeaders)
+        self.location, self.locationData = self.getLocation(data=True)
+        
+
+
+trader = Trader('./token/token.json')
+# print(trader.getShipyardInventory(trader.location['system']))
+# print(trader.getContracts())
