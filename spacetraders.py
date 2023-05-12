@@ -14,7 +14,7 @@ class Agent:
     
     def getAgent(self, authHeaders):
         agentURL = f"{self.URL}/v2/my/agent"
-        print(agentURL)
+        # print(agentURL)
         r = requests.get(url=agentURL, headers=authHeaders)
         agentData = r.json()
 
@@ -32,7 +32,7 @@ class Navigation(Agent):
         }
 
         locationURL = f"{self.URL}/v2/systems/{location['system']}/waypoints/{location['waypoint']}"
-        print(locationURL)
+        # print(locationURL)
 
         r = requests.get(url = locationURL, headers = self.authHeaders)
         # print(r)
@@ -49,15 +49,16 @@ class Navigation(Agent):
 
         if waypointType:
             for waypoint in waypointData['data']:
-                print(waypoint['type'])
+                # print(waypoint['type'])
                 if waypoint['type'] == waypointType:
                     return waypoint
         
         return waypointData
 
     def getShipyardInventory(self, location):
-        shipyardWaypoint = self.getWaypoints(waypointType='ORBITAL_STATION')
-        shipyardURL = f'{self.URL}/v2/systems/{location}/waypoints/{shipyardWaypoint}'
+        shipyardWaypoint = self.getWaypoints(waypointType='ORBITAL_STATION')['symbol']
+        shipyardURL = f'{self.URL}/v2/systems/{location}/waypoints/{shipyardWaypoint}/shipyard'
+        # print(shipyardURL)
 
         r = requests.get(url = shipyardURL, headers = self.authHeaders)
         return r.json()
