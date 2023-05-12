@@ -6,6 +6,7 @@ import json
 # trader inherits systems
 class Agent:
     URL = 'https://api.spacetraders.io'
+    contentHeader = {'Content-Type': 'application/json'}
 
     def getToken(self, token):
         with open(token) as f:
@@ -14,7 +15,6 @@ class Agent:
     
     def getAgent(self, authHeaders):
         agentURL = f"{self.URL}/v2/my/agent"
-        # print(agentURL)
         r = requests.get(url=agentURL, headers=authHeaders)
         agentData = r.json()
 
@@ -32,10 +32,9 @@ class Navigation(Agent):
         }
 
         locationURL = f"{self.URL}/v2/systems/{location['system']}/waypoints/{location['waypoint']}"
-        # print(locationURL)
 
         r = requests.get(url = locationURL, headers = self.authHeaders)
-        # print(r)
+
         locationData = r.json()
         if data:
             return (location, locationData)
@@ -49,7 +48,6 @@ class Navigation(Agent):
 
         if waypointType:
             for waypoint in waypointData['data']:
-                # print(waypoint['type'])
                 if waypoint['type'] == waypointType:
                     return waypoint
         
@@ -58,9 +56,31 @@ class Navigation(Agent):
     def getShipyardInventory(self, location):
         shipyardWaypoint = self.getWaypoints(waypointType='ORBITAL_STATION')['symbol']
         shipyardURL = f'{self.URL}/v2/systems/{location}/waypoints/{shipyardWaypoint}/shipyard'
-        # print(shipyardURL)
 
         r = requests.get(url = shipyardURL, headers = self.authHeaders)
+        return r.json()
+    
+    def getShipInfo(self, shipName):
+        shipURL = f'{self.URL}/v2/my/ships/{shipName}'
+        r = requests.get(url = shipURL, headers = self.authHeaders)
+        return r.json()
+    
+    def shipWaypointNavigate(self, shipName, waypoint):
+        navigateURL = f'{self.URL}/v2/my/ships/{shipName}/navigate'
+        r = requests.post(url = navigateURL, headers = {**self.authHeaders, **self.contentHeader}, json = {'waypointSymbol': waypoint})
+
+        return r.json()
+    
+    def shipOrbit(self, shipName):
+        orbitURL = f'{self.URL}/v2/my/ships/{shipName}/orbit'
+        r = requests.post(url = orbitURL, headers = self.authHeaders)
+
+        return r.json()
+    
+    def shipDock(self, shipName):
+        dockURL = f'{self.URL}/v2/my/ships/{shipName}/dock'
+        r = requests.post(url = dockURL, headers = self.authHeaders)
+
         return r.json()
 
 class Contract(Agent):
@@ -112,5 +132,8 @@ class Trader(Navigation, Contract):
 
 
 trader = Trader('./token/token.json')
-print(trader.getShipyardInventory(trader.location['system']))
+waypoint = trader.getWaypoints('ORBITAL_STATION')
+# print(trader.getShipInfo('VITAMINC-1'))
+# print(trader.shipDock('VITAMINC-1'))
+print(trader.getShipyardInventory(waypoint['systemSymbol']))
 # print(trader.getContracts())
