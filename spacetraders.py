@@ -26,12 +26,19 @@ class Ship(Agent):
 
     def __init__(self, shipName):
         self.shipInfo = self.getShipInfo(shipName)
+
+    def debug(self):
         print(self.shipInfo)
 
     def getShipInfo(self, shipName):
         shipURL = f'{self.SHIP_URL}/{shipName}'
         r = requests.get(url = shipURL, headers = self.authHeaders)
         return r.json()
+    
+    def basicInfo(self):
+        # basicInfoString = f"Ship: {self.shipInfo[]}"
+        pass
+
     
     def shipWaypointNavigate(self, shipName, waypoint):
         navigateURL = f'{self.SHIP_URL}/{shipName}/navigate'
@@ -73,36 +80,18 @@ class Navigation(Ship):
 
     NAV_URL = f'{Agent.URL}/v2/systems'
 
-    def getHeadquarters(self, data=False):
-        headquarters = self.agent['data']['headquarters'].split('-')
 
-        location = {
-            'sector': headquarters[0],
-            'system': '-'.join(headquarters[0:2]),
-            'waypoint': '-'.join(headquarters[0:3])
-        }
+    # def getWaypoints(self, waypointType=None):
+    #     waypointURL = f"{self.NAV_URL}/{self.location['system']}/waypoints"
+    #     r = requests.get(url = waypointURL, headers = self.authHeaders)
+    #     waypointData = r.json()
 
-        locationURL = f"{self.NAV_URL}/{location['system']}/waypoints/{location['waypoint']}"
-
-        r = requests.get(url = locationURL, headers = self.authHeaders)
-
-        locationData = r.json()
-        if data:
-            return (location, locationData)
-        else:
-            return location
-
-    def getWaypoints(self, waypointType=None):
-        waypointURL = f"{self.NAV_URL}/{self.location['system']}/waypoints"
-        r = requests.get(url = waypointURL, headers = self.authHeaders)
-        waypointData = r.json()
-
-        if waypointType:
-            for waypoint in waypointData['data']:
-                if waypoint['type'] == waypointType:
-                    return waypoint
+    #     if waypointType:
+    #         for waypoint in waypointData['data']:
+    #             if waypoint['type'] == waypointType:
+    #                 return waypoint
                   
-        return waypointData
+    #     return waypointData
 
     def getShipyardInventory(self, location):
         shipyardWaypoint = self.getWaypoints(waypointType='ORBITAL_STATION')['symbol']
@@ -132,20 +121,39 @@ class Contract(Agent):
 
         return r.json()
 
-class Trader(Navigation, Contract):
+class Trader(Contract):
 
     def __init__(self, token, shipList):
         self.token = self.getToken(token)
         self.authHeaders = {"Authorization": f"Bearer {self.token}"}
         self.agent = self.getAgent(self.authHeaders)
-        for ship in shipList:
-            self.ships.append(self.getShipInfo(ship))
+        # TODO: there is a better way to do this (OOP u nerd)
+        self.shipList = [self.getShipInfo(ship) for ship in shipList]
 
     def purchaseShip(self, shipType, shipyardWaypoint):
         purchaseURL = f'{self.URL}/v2/my/ships'
         r = requests.post(url = purchaseURL, headers = {**self.authHeaders, **self.contentHeader}, json = {'shipType': shipType, 'waypointSymbol': shipyardWaypoint})
 
         return r.json()
+    
+    def getHeadquarters(self, data=False):
+        headquarters = self.agent['data']['headquarters'].split('-')
+
+        location = {
+            'sector': headquarters[0],
+            'system': '-'.join(headquarters[0:2]),
+            'waypoint': '-'.join(headquarters[0:3])
+        }
+
+        locationURL = f"{self.NAV_URL}/{location['system']}/waypoints/{location['waypoint']}"
+
+        r = requests.get(url = locationURL, headers = self.authHeaders)
+
+        locationData = r.json()
+        if data:
+            return (location, locationData)
+        else:
+            return location
         
 
 
