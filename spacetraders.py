@@ -16,8 +16,15 @@ class Agent:
     
     def getAgent(self, authHeaders):
         r = requests.get(url=f'{self.URL}/v2/my/agent', headers=authHeaders)
+        if r.status_code == 503:
+            print('Maintenance Mode, exiting...')
+            exit()
 
         return r.json()['data']
+    
+    def handleStatusCodes(self, statusCode):
+        if statusCode == 503:
+            raise Exception('503: SpaceTraders is in maintenance mode')
 
 class Navigation:
     
@@ -47,8 +54,17 @@ class Ship(Navigation):
 
     def getShipInfo(self, auth):
         r = requests.get(url = self.shipURL, headers = auth)
+        print(r.json())
 
         return r.json()['data']
+    
+    def displayBasicShipInfo(self):
+        shipInfoString = f"Ship: {self.shipInfo['symbol']}\n\
+                           Location: {self.shipInfo['nav']['waypointSymbol']}\n\
+                           Status: {self.shipInfo['nav']['status']}\n\
+                           \tFlight Mode: {self.shipInfo['nav']['flightMode']}\n\
+                           \tFuel: {self.shipInfo['fuel']['current']}/{self.shipInfo['fuel']['capacity']}"
+        print(shipInfoString)
     
     # Basic movement orders
     def dockDepart(self, auth):
@@ -118,7 +134,8 @@ class Trader(Agent):
         self.token = self.getToken(token)
         self.authHeaders = {'Authorization': f'Bearer {self.token}'}
         self.agent = self.getAgent(self.authHeaders)
-        self.ships = [Ship(self.URL, ship, self.authHeaders) for ship in shipList]
+        self.ships = [(ship, Ship(self.URL, ship, self.authHeaders)) for ship in shipList]
+        self.ships = dict(self.ships)
         self.contract = Contract(self.URL, self.authHeaders)
     
     def purchaseShip(self, shipType, shipyardWaypoint):
@@ -149,3 +166,6 @@ class Trader(Agent):
             return (location, locationData)
         else:
             return location
+        
+trader = Trader('./token/token.json', ['VITAMINC-1'])
+print(trader.ships)
