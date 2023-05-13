@@ -15,16 +15,23 @@ class Agent:
         return data['token']
     
     def getAgent(self, authHeaders):
-        r = requests.get(url=f'{self.URL}/v2/my/agent', headers=authHeaders)
-        if r.status_code == 503:
-            print('Maintenance Mode, exiting...')
+        try:
+            r = requests.get(url=f'{self.URL}/v2/my/agent', headers=authHeaders)
+            assert r.status_code == 200
+        except:
+            print(f'Server Response Code: {r.status_code}, exiting...')
             exit()
+        else:
+            return r.json()['data']
+        
+    def registerAgent(self, callsign, faction):
+        r = requests.get(url= f'{self.URL}/v2/register', headers = self.contentHeader, json = {'symbol': callsign, 'faction': faction})
 
-        return r.json()['data']
-    
-    def handleStatusCodes(self, statusCode):
-        if statusCode == 503:
-            raise Exception('503: SpaceTraders is in maintenance mode')
+        with open('./token/register.json', 'w') as f:
+            f.write(json.dumps(r.json(), indent=4))
+            f.close()
+        
+        return r.json()
 
 class Navigation:
     
@@ -54,7 +61,6 @@ class Ship(Navigation):
 
     def getShipInfo(self, auth):
         r = requests.get(url = self.shipURL, headers = auth)
-        print(r.json())
 
         return r.json()['data']
     
@@ -166,6 +172,6 @@ class Trader(Agent):
             return (location, locationData)
         else:
             return location
-        
+
 trader = Trader('./token/token.json', ['VITAMINC-1'])
 print(trader.ships)
