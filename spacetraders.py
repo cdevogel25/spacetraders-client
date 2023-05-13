@@ -149,9 +149,3 @@ class Trader(Agent):
             return (location, locationData)
         else:
             return location
-
-
-trader = Trader('./token/token.json', ['VITAMINC-1'])
-# print(trader.ships[0].getShipInfo(trader.authHeaders))
-# print(trader.getAgent())
-# print(trader.contract.contracts)
